@@ -79,6 +79,8 @@ class UserController {
             response.status(StatusCode.OK).json({ token });
         } catch (err: any) {
             response.status(StatusCode.Unauthorized).json({ message: err.message });
+            console.log("test");
+            
         }
     }
 
@@ -97,6 +99,8 @@ class UserController {
             response.status(StatusCode.InternalServerError).json({ message: err.message });
         }
     }
+    
+    
 
     // Update user
 
