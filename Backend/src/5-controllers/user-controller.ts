@@ -8,6 +8,7 @@ import { StatusCode } from "../3-models/status-code";
 import { securityMiddleware } from "../6-middleware/security.middleware";
 import { cyber } from "../2-utils/cyber";
 import fs from "fs";
+import { checkPasswordStrength } from "../2-utils/password";
 
 // Default profile images (relative to 1-assets/)
 const DEFAULT_MALE_IMAGE = "default-profile-pics/male-user-default-pic.webp";
@@ -60,10 +61,22 @@ class UserController {
                 response.status(StatusCode.BadRequest).json({ message: "Email is required." });
                 return;
             }
+
             // Check for duplicate email
             const emailTaken = await UserModel.exists({ email: userData.email.toLowerCase() });
             if (emailTaken) {
                 response.status(StatusCode.Conflict).json({ message: "Email already taken." });
+                return;
+            }
+
+            // Validate password presence + strength BEFORE hashing
+            if (!userData.password) {
+                response.status(StatusCode.BadRequest).json({ message: "Password is required." });
+                return;
+            }
+            const strength = checkPasswordStrength(userData.password, userData.email, userData.fullName);
+            if (!strength.ok) {
+                response.status(StatusCode.BadRequest).json({ message: "Weak password.", reasons: strength.reasons });
                 return;
             }
 
@@ -82,10 +95,8 @@ class UserController {
                 userData.profileImage = getDefaultImageByGender(userData.gender);
             }
 
-            // Hash password before saving
-            if (userData.password) {
-                userData.password = cyber.hash(userData.password);
-            }
+            // Hash password before saving (after strength check)
+            userData.password = cyber.hash(userData.password);
 
             // Create and save user, return JWT token
             const user = new UserModel(userData);
@@ -241,18 +252,36 @@ class UserController {
         try {
             const userFromToken = (request as any).user;
             const { currentPassword, newPassword } = request.body;
+
+            if (!currentPassword || !newPassword) {
+                response.status(StatusCode.BadRequest).json({ message: "currentPassword and newPassword are required." });
+                return;
+            }
+
             const user = await UserModel.findById(userFromToken._id);
             if (!user) {
                 response.status(StatusCode.NotFound).json({ message: "User not found." });
                 return;
             }
+
             const currentHashed = cyber.hash(currentPassword);
             if (user.password !== currentHashed) {
                 response.status(StatusCode.Unauthorized).json({ message: "Current password is incorrect." });
                 return;
             }
+
+            // Strength check for the new password before hashing
+            const strength = checkPasswordStrength(newPassword, user.email, (user as any).fullName);
+            if (!strength.ok) {
+                response.status(StatusCode.BadRequest).json({ message: "Weak password.", reasons: strength.reasons });
+                return;
+            }
+
             user.password = cyber.hash(newPassword);
+            // Optional: track the change time so you can invalidate old JWTs later
+            (user as any).passwordChangedAt = new Date();
             await user.save();
+
             response.status(StatusCode.OK).json({ message: "Password updated successfully." });
         } catch (err: any) {
             next(err);

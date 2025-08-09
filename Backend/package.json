@@ -13,6 +13,7 @@
         "@types/express-fileupload": "^1.5.1",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^24.2.0",
+        "@types/nodemailer": "^6.4.17",
         "@types/uuid": "^10.0.0",
         "nodemon": "^3.1.10",
         "ts-node": "^10.9.2",
@@ -26,6 +27,7 @@
         "express-async-handler": "^1.2.0",
         "jsonwebtoken": "^9.0.2",
         "mongoose": "^8.17.0",
+        "nodemailer": "^7.0.5",
         "striptags": "^3.2.0",
         "uploaded-file-saver": "^1.0.1",
         "uuid": "^11.1.0"
