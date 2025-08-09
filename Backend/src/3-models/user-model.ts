@@ -33,6 +33,7 @@ const UserSchema = new Schema<IUser>({
         unique: [true, "Email already exists."],
         minlength: [12, "Email too short."],
         maxlength: [50, "Email too long."],
+        lowercase: true,
         match: [
             /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/,
             "Invalid email address."

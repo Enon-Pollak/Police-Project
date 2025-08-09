@@ -61,7 +61,7 @@ class UserController {
                 return;
             }
             // Check for duplicate email
-            const emailTaken = await UserModel.exists({ email: userData.email });
+            const emailTaken = await UserModel.exists({ email: userData.email.toLowerCase() });
             if (emailTaken) {
                 response.status(StatusCode.Conflict).json({ message: "Email already taken." });
                 return;
@@ -110,7 +110,7 @@ class UserController {
                 return;
             }
             email = String(email).trim().toLowerCase();
-            const token = await userService.login(email, password);
+            const token = await userService.login(email.toLowerCase(), password);
             response.status(StatusCode.OK).json({ token });
         } catch (err: any) {
             next(err);

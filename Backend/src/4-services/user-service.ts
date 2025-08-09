@@ -1,9 +1,3 @@
-import { Request, Response } from "express";
-import path from "path";
-import { v4 as uuid } from "uuid";
-import fileUpload from "express-fileupload";
-
-import { StatusCode } from "../3-models/status-code";
 import { IUser, UserModel } from "../3-models/user-model";
 import { AuthorizationError, ValidationError } from "../3-models/client-errors";
 import { cyber } from "../2-utils/cyber";
@@ -11,8 +5,11 @@ import { cyber } from "../2-utils/cyber";
 class UserService {
     // Register a new user and return a JWT token
     public async register(user: IUser): Promise<string> {
-        // Check for duplicate email
-        const exists = await UserModel.countDocuments({ email: user.email }).exec();
+        // Normalize email: trim + lowercase (schema also enforces lowercase, but we validate on normalized value)
+        if (user.email) user.email = String(user.email).trim().toLowerCase();
+
+        // Check for duplicate email (case-insensitive due to normalization)
+        const exists = await UserModel.exists({ email: user.email }).exec();
         if (exists) throw new ValidationError("Email already taken.");
 
         // Save user to database
@@ -24,8 +21,11 @@ class UserService {
 
     // Login user and return a JWT token
     public async login(email: string, password: string): Promise<string> {
-        // Find user by email
-        const user = await UserModel.findOne({ email }).exec();
+        // Normalize email to match storage format
+        const normalizedEmail = String(email).trim().toLowerCase();
+
+        // Find user by normalized email
+        const user = await UserModel.findOne({ email: normalizedEmail }).exec();
         if (!user) throw new AuthorizationError("Incorrect email or password.");
 
         // Hash the given password and compare to stored hash
