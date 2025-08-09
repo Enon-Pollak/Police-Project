@@ -7,37 +7,43 @@ import { userController } from "./5-controllers/user-controller";
 import { securityMiddleware } from "./6-middleware/security.middleware";
 import fileUpload from "express-fileupload";
 import path from "path";
+import fs from "fs";
 
 class App {
     public async start(): Promise<void> {
         // Connecting to MongoDB:
         await mongoose.connect(appConfig.mongodbConnectionString);
 
-        // Create the server object: 
+        // Create the server object:
         const server = express();
 
         server.use(cors()); // Always first
         server.use(fileUpload()); // Before body parsers if you expect file uploads
-        server.use(express.json()); 
+        server.use(express.json());
         server.use(express.urlencoded({ extended: true }));
 
-        // Serve uploaded images:
-        server.use("/1-assets", express.static(path.join(__dirname, "1-assets")));
-        server.use("/assets", express.static(path.join(__dirname, "1-assets")));
+        // Resolve static assets root (supports either Backend/1-assets or Backend/src/1-assets)
+        const candidateRootA = path.join(__dirname, "..", "1-assets"); // Backend/1-assets
+        const candidateRootB = path.join(__dirname, "1-assets");       // Backend/src/1-assets
+        const assetsRoot = fs.existsSync(candidateRootA) ? candidateRootA : candidateRootB;
 
-        // Protect against XSS attacks :
+        // Serve static assets:
+        server.use("/1-assets", express.static(assetsRoot));
+        server.use("/assets", express.static(assetsRoot)); // optional alias
+
+        // Protect against XSS attacks:
         server.use(securityMiddleware.preventXssAttack);
 
-        // Listen to controller routes: 
+        // Listen to controller routes:
         server.use(userController.router);
 
-        // Route not found middleware: 
+        // Route not found middleware:
         server.use(errorMiddleware.routeNotFound);
 
-        // Catch-all middleware: 
+        // Catch-all middleware:
         server.use(errorMiddleware.catchAll);
 
-        // Run server: 
+        // Run server:
         server.listen(appConfig.port, () =>
             console.log("Listening on http://localhost:" + appConfig.port)
         );
