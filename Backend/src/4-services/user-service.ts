@@ -8,24 +8,21 @@ import { IUser, UserModel } from "../3-models/user-model";
 import { AuthorizationError, ValidationError } from "../3-models/client-errors";
 import { cyber } from "../2-utils/cyber";
 
-
-
-
 class UserService {
-    // Register a new user:
+    // Register a new user and return a JWT token
     public async register(user: IUser): Promise<string> {
-    // Check for duplicate email
-    const exists = await UserModel.countDocuments({ email: user.email }).exec();
-    if (exists) throw new ValidationError("Email already taken.");
+        // Check for duplicate email
+        const exists = await UserModel.countDocuments({ email: user.email }).exec();
+        if (exists) throw new ValidationError("Email already taken.");
 
-    // Save to DB
-    const dbUser = await new UserModel(user).save();
+        // Save user to database
+        const dbUser = await new UserModel(user).save();
 
-    // Generate and return token
-    return cyber.generateToken(dbUser);
-}
+        // Generate and return JWT token
+        return cyber.generateToken(dbUser);
+    }
 
-
+    // Login user and return a JWT token
     public async login(email: string, password: string): Promise<string> {
         // Find user by email
         const user = await UserModel.findOne({ email }).exec();
@@ -36,8 +33,7 @@ class UserService {
         if (user.password !== hashedPassword) throw new AuthorizationError("Incorrect email or password.");
 
         // Generate and return JWT token
-        const token = cyber.generateToken(user);
-        return token;
+        return cyber.generateToken(user);
     }
 }
 

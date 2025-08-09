@@ -1,9 +1,9 @@
-import mongoose, { Schema, Document, ObjectId } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 import { UserRole } from "./role";
 import { Gender } from "./gender";
 import { VolunteerType } from "./volunteer-type";
 
-// Main interface for the user document
+// User document interface
 export interface IUser extends Document {
     fullName: string;
     email: string;
@@ -13,17 +13,14 @@ export interface IUser extends Document {
     serviceNumber: string;
     gender: Gender;
     profileImage?: string;
-
-    // Only for volunteers
     volunteerData?: {
         volunteerType: VolunteerType;
         hasDriverLicense: boolean;
     };
 }
 
-// Mongoose schema for the user
+// User schema definition
 const UserSchema = new Schema<IUser>({
-
     fullName: {
         type: String,
         required: [true, "Missing FullName"],
@@ -81,10 +78,8 @@ const UserSchema = new Schema<IUser>({
         required: [true, "Missing gender."]
     },
     profileImage: {
-        type: String // optional image URL or filename
+        type: String // image filename or URL
     },
-
-    // Volunteer-specific section (optional for officers)
     volunteerData: {
         volunteerType: {
             type: String,
@@ -104,8 +99,8 @@ const UserSchema = new Schema<IUser>({
         },
     },
 },
-    { timestamps: true } // Automatically add createdAt and updatedAt fields
+    { timestamps: true } // Adds createdAt and updatedAt
 );
 
-// Export the model
+// Export the user model
 export const UserModel = mongoose.model<IUser>("User", UserSchema);
