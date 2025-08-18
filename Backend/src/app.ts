@@ -8,42 +8,48 @@ import { securityMiddleware } from "./6-middleware/security.middleware";
 import fileUpload from "express-fileupload";
 import path from "path";
 import fs from "fs";
+import { shiftController } from "./5-controllers/shift-controller";
 
+/**
+ * App - initializes Express, connects to MongoDB and wires middleware + controllers.
+ * Comments are concise — enough to understand ordering and why certain middleware come first.
+ */
 class App {
     public async start(): Promise<void> {
-        // Connecting to MongoDB:
+        // Connect to MongoDB (must complete before handling requests)
         await mongoose.connect(appConfig.mongodbConnectionString);
 
-        // Create the server object:
+        // Express app
         const server = express();
 
-        server.use(cors()); // Always first
-        server.use(fileUpload()); // Before body parsers if you expect file uploads
-        server.use(express.json());
-        server.use(express.urlencoded({ extended: true }));
+        // Middleware ordering matters:
+        server.use(cors()); // CORS should be applied early
+        server.use(fileUpload()); // File upload middleware before body parsers if uploads expected
+        server.use(express.json()); // JSON body parser
+        server.use(express.urlencoded({ extended: true })); // URL-encoded bodies
 
-        // Resolve static assets root (supports either Backend/1-assets or Backend/src/1-assets)
-        const candidateRootA = path.join(__dirname, "..", "1-assets"); // Backend/1-assets
-        const candidateRootB = path.join(__dirname, "1-assets");       // Backend/src/1-assets
-        const assetsRoot = fs.existsSync(candidateRootA) ? candidateRootA : candidateRootB;
-
-        // Serve static assets:
-        server.use("/1-assets", express.static(assetsRoot));
-        server.use("/assets", express.static(assetsRoot)); // optional alias
-
-        // Protect against XSS attacks:
+        // Register routes from controllers
         server.use(securityMiddleware.preventXssAttack);
-
-        // Listen to controller routes:
+        server.use(shiftController.router);
         server.use(userController.router);
 
-        // Route not found middleware:
-        server.use(errorMiddleware.routeNotFound);
+        // Resolve static assets root (supports working from src or the built folder)
+        const candidateRootA = path.join(__dirname, "..", "1-assets"); // project root assets
+        const candidateRootB = path.join(__dirname, "1-assets");       // src assets during dev
+        const assetsRoot = fs.existsSync(candidateRootA) ? candidateRootA : candidateRootB;
 
-        // Catch-all middleware:
+        // Serve static files under both paths (alias for convenience)
+        server.use("/1-assets", express.static(assetsRoot));
+        server.use("/assets", express.static(assetsRoot));
+
+        // Security middleware (e.g. basic XSS prevention)
+        server.use(securityMiddleware.preventXssAttack);
+
+        // Error handling (route-not-found should come before catch-all)
+        server.use(errorMiddleware.routeNotFound);
         server.use(errorMiddleware.catchAll);
 
-        // Run server:
+        // Start listening
         server.listen(appConfig.port, () =>
             console.log("Listening on http://localhost:" + appConfig.port)
         );
